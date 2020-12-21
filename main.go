@@ -31,7 +31,7 @@ func init() {
 	flag.StringVar(&esp, "esp", "ESP_4E2ABA", "ESP8266 device address")
 
 	flag.IntVar(&lowTemp, "low-temp", 21, "low temprature to turn heater on")
-	flag.IntVar(&heatTime, "heat-time", 10, "heat time")
+	flag.IntVar(&heatTime, "heat-time", 12, "heat time")
 }
 
 func main() {
@@ -40,7 +40,9 @@ func main() {
 	esp = "http://" + esp
 
 	for {
-		if time.Now().Local().Minute() == 0 {
+		tm := time.Now().Local()
+
+		if tm.Minute() == 0 {
 
 			res, err := rek.Get(esp+"/temperature", rek.Timeout(timeout*time.Second))
 			if err != nil {
@@ -68,7 +70,8 @@ func main() {
 
 			log.Debugf("Dump: %+v", msg)
 
-			if msg.Temperature-4 < lowTemp {
+			if msg.Temperature <= lowTemp {
+				log.Infof("Heater ON")
 
 				res, err := rek.Get(esp+"/digital/8/1", rek.Timeout(timeout*time.Second))
 				if err != nil {
@@ -85,8 +88,7 @@ func main() {
 					continue
 				}
 				res.Body().Close()
-
-				log.Infof("Heater worked")
+				log.Infof("Heater OFF")
 			}
 		}
 
