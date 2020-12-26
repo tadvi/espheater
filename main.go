@@ -14,7 +14,6 @@ const timeout = 15
 
 var (
 	esp      string
-	lowTemp  int
 	heatTime int
 )
 
@@ -29,9 +28,7 @@ type ESPMessage struct {
 
 func init() {
 	flag.StringVar(&esp, "esp", "ESP_4E2ABA", "ESP8266 device address")
-
-	flag.IntVar(&lowTemp, "low-temp", 21, "low temprature to turn heater on")
-	flag.IntVar(&heatTime, "heat-time", 12, "heat time")
+	flag.IntVar(&heatTime, "heat-time", 15, "heat time")
 }
 
 func main() {
@@ -42,8 +39,7 @@ func main() {
 	for {
 		tm := time.Now().Local()
 
-		if tm.Minute() == 0 {
-
+		if tm.Minute() == 0 && (tm.Hour() > 21 && tm.Hour() < 9) {
 			res, err := rek.Get(esp+"/temperature", rek.Timeout(timeout*time.Second))
 			if err != nil {
 				log.Errorf("Error getting temperature: %v", err)
@@ -70,26 +66,29 @@ func main() {
 
 			log.Debugf("Dump: %+v", msg)
 
-			if msg.Temperature <= lowTemp {
-				log.Infof("Heater ON")
+			log.Infof("Heater ON")
 
-				res, err := rek.Get(esp+"/digital/8/1", rek.Timeout(timeout*time.Second))
-				if err != nil {
-					log.Errorf("Error turning on the heater: %v", err)
-					continue
-				}
-				res.Body().Close()
-
-				time.Sleep(time.Minute * time.Duration(heatTime))
-
-				res, err = rek.Get(esp+"/digital/8/0", rek.Timeout(timeout*time.Second))
-				if err != nil {
-					log.Errorf("Error turning off the heater: %v", err)
-					continue
-				}
-				res.Body().Close()
-				log.Infof("Heater OFF")
+			res, err = rek.Get(esp+"/digital/8/1", rek.Timeout(timeout*time.Second))
+			if err != nil {
+				log.Errorf("Error turning on the heater: %v", err)
+				continue
 			}
+			res.Body().Close()
+
+			extra := 0
+			if tm.Hour() > 2 && tm.Hour() < 9 {
+				extra = 5
+			}
+
+			time.Sleep(time.Minute * time.Duration(heatTime+extra))
+
+			res, err = rek.Get(esp+"/digital/8/0", rek.Timeout(timeout*time.Second))
+			if err != nil {
+				log.Errorf("Error turning off the heater: %v", err)
+				continue
+			}
+			res.Body().Close()
+			log.Infof("Heater OFF")
 		}
 
 		time.Sleep(time.Minute)
