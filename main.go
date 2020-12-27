@@ -39,7 +39,7 @@ func main() {
 	for {
 		tm := time.Now().Local()
 
-		if tm.Minute() == 0 && (tm.Hour() > 21 && tm.Hour() < 9) {
+		if tm.Minute() == 0 && (tm.Hour() > 21 || tm.Hour() < 9) {
 			res, err := rek.Get(esp+"/temperature", rek.Timeout(timeout*time.Second))
 			if err != nil {
 				log.Errorf("Error getting temperature: %v", err)
